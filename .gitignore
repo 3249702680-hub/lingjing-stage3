@@ -5,3 +5,8 @@ __pycache__/
 .env.*
 uploads/*
 !uploads/.gitkeep
+.gradio/
+gradio/
+gradio_temp/
+gradio_cached_examples/
+flagged/
