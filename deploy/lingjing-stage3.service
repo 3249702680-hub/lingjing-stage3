@@ -1,0 +1,22 @@
+[Unit]
+Description=Lingjing Stage3 FastAPI and Gradio
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=lingjing
+Group=lingjing
+WorkingDirectory=/opt/lingjing-stage3
+EnvironmentFile=/etc/lingjing-stage3.env
+Environment=PYTHONUNBUFFERED=1
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+ExecStart=/bin/bash /opt/lingjing-stage3/start.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

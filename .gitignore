@@ -1,8 +1,10 @@
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .env
 .env.*
+*.env
 uploads/*
 !uploads/.gitkeep
 .gradio/
@@ -10,3 +12,10 @@ gradio/
 gradio_temp/
 gradio_cached_examples/
 flagged/
+logs/
+*.log
+.cache/
+.pytest_cache/
+runs/
+*.bak
+*.tmp
