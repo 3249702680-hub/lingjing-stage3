@@ -11,3 +11,5 @@ Pillow==12.3.0
 requests==2.34.2
 pydantic==2.14.1
 PyJWT==2.15.1
+redis==8.1.0
+rq==2.12.0

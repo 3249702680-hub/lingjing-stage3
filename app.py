@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from database import AnalysisRecord, SessionLocal
 from web_ui import create_ui
 from security import configure_auth
+from job_queue import router as jobs_router
 from services.yolo_service import detect_objects
 from services.qwen_service import (
     MODEL_NAME,
@@ -277,6 +278,7 @@ def analyze(request: AnalyzeRequest):
     }
 
 
+app.include_router(jobs_router)
 configure_auth(app)
 
 app = gr.mount_gradio_app(
@@ -297,6 +299,8 @@ app = gr.mount_gradio_app(
             "app.py",
             "web_ui.py",
             "security.py",
+            "job_queue.py",
+            "worker.py",
             "requirements.txt",
         )
     ] + [

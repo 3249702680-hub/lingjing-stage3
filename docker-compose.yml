@@ -5,7 +5,11 @@ services:
     init: true
     expose:
       - "8000"
-    environment:
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment: &app_environment
+      REDIS_URL: redis://redis:6379/0
       AUTH_USERNAME: ${AUTH_USERNAME:-}
       AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
       JWT_SECRET: ${JWT_SECRET:-}
@@ -23,6 +27,37 @@ services:
       - uploads:/app/uploads
     restart: unless-stopped
     stop_grace_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    image: lingjing-stage3:day4
+    init: true
+    command: ["python", "worker.py"]
+    environment: *app_environment
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; from rq import Worker; from job_queue import redis_connection; assert any(w.name == 'analysis-' + socket.gethostname() for w in Worker.all(connection=redis_connection()))"]
+      interval: 30s
+      timeout: 8s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    stop_grace_period: 390s
 
   nginx:
     image: nginx:stable-alpine
@@ -44,3 +79,4 @@ services:
 
 volumes:
   uploads:
+  redis_data:

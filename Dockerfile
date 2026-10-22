@@ -36,7 +36,7 @@ RUN groupadd --gid 10001 app \
     && mkdir -p /app/uploads /home/app/.config/Ultralytics \
     && chown -R app:app /app/uploads /home/app
 
-COPY app.py web_ui.py database.py security.py /app/
+COPY app.py web_ui.py database.py security.py job_queue.py worker.py /app/
 COPY services/*.py /app/services/
 COPY weights/garbage_detect.pt /app/weights/garbage_detect.pt
 

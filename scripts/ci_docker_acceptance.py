@@ -120,7 +120,7 @@ def main():
                           "assert not os.getenv('DASHSCOPE_API_KEY'); assert not os.getenv('SQLSERVER_PASSWORD'); "
                           "print(json.dumps(sorted(str(p.relative_to('/app')) for p in Path('/app').rglob('*') if p.is_file())))")
         files = json.loads(command(["docker", "run", "--rm", "--entrypoint", "python", "lingjing-stage3:day4", "-c", inventory_code]))
-        allowed = {"app.py", "web_ui.py", "database.py", "security.py", "requirements.txt", "services/__init__.py",
+        allowed = {"app.py", "web_ui.py", "database.py", "security.py", "job_queue.py", "worker.py", "requirements.txt", "services/__init__.py",
                    "services/yolo_service.py", "services/qwen_service.py", "weights/garbage_detect.pt"}
         check("image_contains_only_allowed_project_files", set(files) == allowed, files=files)
         command(compose + ["up", "-d", "--no-build", "nginx"], timeout=180)
@@ -177,6 +177,57 @@ def main():
         check("upload", status == 200 and json.loads(body).get("filename") == filename, status=status, filename=filename)
         payload = json.dumps({"filename": filename}).encode()
         predict("yolo_before_recreate", payload)
+        # The producer must enqueue while no consumer is running.
+        job_payload = json.dumps({"filename": filename, "mode": "yolo"}).encode()
+        status, _ = request("/jobs", job_payload, auth=False)
+        check("queue_requires_jwt", status == 401, status=status)
+        check("consumer_initially_stopped", not command(compose + ["ps", "-q", "worker"]))
+        status, body = request("/jobs", job_payload)
+        submitted = json.loads(body)
+        check("queue_submit_accepted", status == 202 and submitted.get("status") == "queued", status=status, response=submitted)
+        job_id = submitted["job_id"]
+        status, body = request("/jobs/" + job_id)
+        check("queue_pending_without_consumer", status == 200 and json.loads(body).get("status") == "queued", response=json.loads(body))
+        redis_id = command(compose + ["ps", "-q", "redis"])
+        redis_ports = json.loads(command(["docker", "inspect", "--format", "{{json .HostConfig.PortBindings}}", redis_id]))
+        check("redis_not_exposed", not redis_ports)
+        command(compose + ["up", "-d", "--no-deps", "--force-recreate", "redis"], timeout=120)
+        for attempt in range(30):
+            try:
+                if command(compose + ["exec", "-T", "redis", "redis-cli", "ping"]) == "PONG":
+                    break
+            except RuntimeError:
+                pass
+            time.sleep(1)
+        status, body = request("/jobs/" + job_id)
+        check("queued_job_survives_redis_recreation", status == 200 and json.loads(body).get("status") == "queued", response=json.loads(body))
+        command(compose + ["up", "-d", "--no-build", "worker"], timeout=120)
+
+        def wait_job(job_id):
+            deadline = time.monotonic() + 180
+            while time.monotonic() < deadline:
+                status, body = request("/jobs/" + job_id)
+                response = json.loads(body)
+                if status != 200:
+                    raise AssertionError("Job query failed: " + str(status))
+                if response.get("status") in {"finished", "failed"}:
+                    return response
+                time.sleep(1)
+            raise TimeoutError("Worker did not finish the job")
+
+        completed = wait_job(job_id)
+        detections = completed.get("result", {}).get("detections", [])
+        check("queue_real_yolo_result", completed.get("status") == "finished" and any(d.get("class_name") == args.expected_class and d.get("confidence", 0) > 0.25 for d in detections), response=completed)
+        worker_id = command(compose + ["ps", "-q", "worker"])
+        worker_hostname = command(["docker", "inspect", "--format", "{{.Config.Hostname}}", worker_id])
+        check("separate_worker_consumed_job", completed.get("worker", {}).get("hostname") == worker_hostname and worker_id != original_id)
+        failed_payload = json.dumps({"filename": filename, "mode": "analyze"}).encode()
+        status, body = request("/jobs", failed_payload)
+        check("queue_analyze_accepted", status == 202, status=status)
+        failed = wait_job(json.loads(body)["job_id"])
+        check("queue_missing_qwen_is_failed", failed.get("status") == "failed" and failed.get("error", {}).get("status_code") == 503, response=failed, real_qwen_verified=False)
+        status, _ = request("/jobs", json.dumps({"filename": "../paper.jpg", "mode": "yolo"}).encode())
+        check("queue_rejects_unsafe_filename", status == 400, status=status)
         for route in ("/predict/qwen", "/analyze"):
             status, body = request(route, payload)
             response = json.loads(body)
@@ -215,7 +266,7 @@ def main():
         evidence["error"] = type(error).__name__ + ": " + str(error)
     finally:
         try:
-            evidence["container_logs"] = command(compose + ["logs", "--no-color", "--tail", "200", "app", "nginx"])
+            evidence["container_logs"] = command(compose + ["logs", "--no-color", "--tail", "200", "app", "nginx", "worker", "redis"])
         except Exception as error:
             evidence["log_collection_error"] = str(error)
         args.output.parent.mkdir(parents=True, exist_ok=True)

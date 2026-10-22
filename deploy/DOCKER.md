@@ -167,3 +167,7 @@ CI 的所有 HTTP 验收经 Nginx 8080 入口，另用 Gradio 客户端经过代
 参考：[Gradio 官方 Nginx 部署说明](https://www.gradio.app/guides/running-gradio-on-your-web-server-with-nginx)、[Nginx WebSocket 代理](https://nginx.org/en/docs/http/websocket.html)。
 
 JWT 配置及本机启动见 [AUTH.md](AUTH.md)。上面的 HTTP 示例中 `$TOKEN` 是当前登录返回的短时 Token，不能提交或打印到 CI 证据。
+
+## 消息队列服务
+
+Compose 同时运行 Redis 与独立 worker，两个应用进程共用 uploads 卷，Redis 使用独立 redis_data 卷。任务提交、消费和查询说明见 [QUEUE.md](QUEUE.md)。CI 会确认 Redis 未发布端口、先排队后消费、Redis 重建后任务仍在和真实 YOLO 结果。
