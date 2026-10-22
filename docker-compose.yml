@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    image: lingjing-stage3:day4
+    init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      SQLSERVER_AUTH: ${SQLSERVER_AUTH:-sql}
+      SQLSERVER_HOST: ${SQLSERVER_HOST:-not-configured}
+      SQLSERVER_PORT: ${SQLSERVER_PORT:-1433}
+      SQLSERVER_DATABASE: ${SQLSERVER_DATABASE:-lingjing_stage3}
+      SQLSERVER_DRIVER: ${SQLSERVER_DRIVER:-ODBC Driver 18 for SQL Server}
+      SQLSERVER_USERNAME: ${SQLSERVER_USERNAME:-}
+      SQLSERVER_PASSWORD: ${SQLSERVER_PASSWORD:-}
+      SQLSERVER_TRUST_SERVER_CERTIFICATE: ${SQLSERVER_TRUST_SERVER_CERTIFICATE:-no}
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+volumes:
+  uploads:

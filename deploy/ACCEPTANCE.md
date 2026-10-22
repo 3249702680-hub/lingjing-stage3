@@ -1,5 +1,7 @@
 # 第三阶段提交前验收记录
 
+> Day3 历史记录（2026-10-20），仅代表当时环境；Day4 Docker 当前结果见 [DOCKER_ACCEPTANCE.md](DOCKER_ACCEPTANCE.md)。
+
 日期：2026-10-20（北京时间）。本记录区分 Windows 实测与尚未执行的 Linux 验收。
 
 ## 本轮实际结果

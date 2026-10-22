@@ -29,10 +29,10 @@ FastAPI + Gradio 提供图片上传、YOLO 垃圾检测、Qwen3-VL 分析和 SQL
 
 - 项目需要自己的 `weights/garbage_detect.pt`；不修改第二阶段目录。
 - Qwen 使用 `qwen3-vl-plus`，从进程环境读取 `DASHSCOPE_API_KEY`。请通过本机安全配置设置，不把值写入代码或文档。
-- SQL Server 需要数据库 `lingjing_stage3` 和 Microsoft ODBC Driver 18 for SQL Server。默认保留本机 Windows 集成认证。
-- 可使用以下环境变量覆盖数据库配置：`SQLSERVER_HOST`、`SQLSERVER_DATABASE`、`SQLSERVER_DRIVER`、`SQLSERVER_PORT`、`SQLSERVER_USERNAME`、`SQLSERVER_PASSWORD`。设置用户名时采用 SQL Server 账号认证；密码仅置于安全的进程环境或受限的服务环境文件。
+- SQL Server 需要数据库 `lingjing_stage3` 和 Microsoft ODBC Driver 18 for SQL Server。默认保留本机 Windows 集成认证；Linux / Docker 默认使用 SQL Server 账号认证。
+- 可使用以下环境变量覆盖数据库配置：`SQLSERVER_AUTH`（`auto`、`windows`、`sql`）、`SQLSERVER_HOST`、`SQLSERVER_DATABASE`、`SQLSERVER_DRIVER`、`SQLSERVER_PORT`、`SQLSERVER_USERNAME`、`SQLSERVER_PASSWORD`。`auto` 在 Windows 有账号时使用 SQL 认证，否则使用集成认证；Linux 默认使用 SQL 认证。用户名与密码成对配置，仅置于安全的进程环境或受限的服务环境文件。
 - `SQLSERVER_TRUST_SERVER_CERTIFICATE` 可设置为 `yes` 或 `no`。Windows 默认 `yes` 以兼容现有本机配置，Linux 默认 `no`，需要有效的服务器证书或可信 CA。若使用自签名证书，仅在明确接受证书信任策略时覆盖该值。
-- `.env` 不会自动加载；使用当前终端环境，或由 Linux 的 systemd `EnvironmentFile` 注入。
+- 应用本身不会自动加载 `.env`；原生启动使用当前终端环境或 Linux 的 systemd `EnvironmentFile`，Docker Compose 则从终端 / `.env` 读取并注入配置。
 
 首次部署可以只建表，不插入模拟分析结果：
 
@@ -89,8 +89,8 @@ WHERE id = 123; -- 替换为网页显示的实际编号
 
 除记录存在外，必须核对数据库中的完整 `qwen_answer` 与网页/API 原始回答逐字相等，包括中文、换行和 emoji；不能仅检查非空或中文片段。
 
-Linux 启动脚本、systemd 模板及目标环境验证步骤见 [deploy/LINUX.md](deploy/LINUX.md)。目前未取得要求 Docker 的考核原文，因此不新增 Docker 配置，也不将 Docker 认定为已验收。
+Linux 启动脚本、systemd 模板及目标环境验证步骤见 [deploy/LINUX.md](deploy/LINUX.md)。Docker 构建、Compose 启动、网络与数据库配置、上传卷和验收步骤见 [deploy/DOCKER.md](deploy/DOCKER.md)；部署文件齐备不等于已通过目标环境运行验收。
 
 不要提交密钥、`.env`、`.venv`、上传图片和运行缓存；提交前检查忽略规则与 Git 状态。
 
-本次提交前的实际验证结果和未执行项目见 [deploy/ACCEPTANCE.md](deploy/ACCEPTANCE.md)。
+Day3 历史验证见 [deploy/ACCEPTANCE.md](deploy/ACCEPTANCE.md)，Day4 Docker 实际结果与未验收项见 [deploy/DOCKER_ACCEPTANCE.md](deploy/DOCKER_ACCEPTANCE.md)。

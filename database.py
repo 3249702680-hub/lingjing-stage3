@@ -4,6 +4,7 @@ import os
 
 from sqlalchemy import (
     create_engine,
+    event,
     text,
     select,
     JSON,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     UnicodeText,
 )
 from sqlalchemy.engine import URL
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -21,12 +23,20 @@ from sqlalchemy.orm import (
 
 
 # 1. 数据库连接配置
-# Keep the existing Windows connection unless explicitly overridden.
+# Windows keeps integrated authentication by default; Linux defaults to SQL auth.
 _username = os.getenv("SQLSERVER_USERNAME") or None
 _password = os.getenv("SQLSERVER_PASSWORD") or None
-if bool(_username) != bool(_password):
-    raise ValueError("Set both SQLSERVER_USERNAME and SQLSERVER_PASSWORD")
+_auth = os.getenv("SQLSERVER_AUTH", "auto").strip().lower()
+if _auth not in {"auto", "windows", "sql"}:
+    raise ValueError("SQLSERVER_AUTH must be auto, windows, or sql")
+if _auth == "auto":
+    _auth = "sql" if os.name != "nt" or _username or _password else "windows"
+if _auth == "windows" and os.name != "nt":
+    raise ValueError("Windows integrated authentication is only supported on Windows; use SQLSERVER_AUTH=sql on Linux")
+if _auth == "windows" and (_username or _password):
+    raise ValueError("SQLSERVER_AUTH=windows cannot be combined with SQL credentials")
 
+_host = os.getenv("SQLSERVER_HOST") or ("暗精夜灵" if os.name == "nt" else "not-configured")
 _query = {
     "driver": os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server"),
     "Encrypt": "yes",
@@ -34,14 +44,15 @@ _query = {
         "SQLSERVER_TRUST_SERVER_CERTIFICATE", "yes" if os.name == "nt" else "no"
     ),
 }
-if _username is None:
-    _query["Trusted_Connection"] = "yes"
+# Explicit SQL authentication prevents implicit Windows authentication on Linux.
+if _auth == "sql":
+    _query["authentication"] = "SqlPassword"
 
 DATABASE_URL = URL.create(
     "mssql+pyodbc",
-    username=_username,
-    password=_password,
-    host=os.getenv("SQLSERVER_HOST", "暗精夜灵"),
+    username=_username if _auth == "sql" else None,
+    password=_password if _auth == "sql" else None,
+    host=_host,
     port=int(os.environ["SQLSERVER_PORT"]) if os.getenv("SQLSERVER_PORT") else None,
     database=os.getenv("SQLSERVER_DATABASE", "lingjing_stage3"),
     query=_query,
@@ -52,6 +63,17 @@ engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
 )
+
+# Validate SQL configuration when a database connection is requested, so /health,
+# uploads and standalone inference remain available without database credentials.
+@event.listens_for(engine, "do_connect")
+def _check_database_configuration(dialect, connection_record, args, kwargs):
+    if _auth == "sql" and (not _username or not _password or _host == "not-configured"):
+        raise SQLAlchemyError(
+            "SQL Server authentication requires SQLSERVER_HOST, "
+            "SQLSERVER_USERNAME and SQLSERVER_PASSWORD in the process environment"
+        )
+
 
 # 3. 创建数据库会话工厂
 SessionLocal = sessionmaker(bind=engine)

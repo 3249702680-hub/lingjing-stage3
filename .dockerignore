@@ -1,0 +1,14 @@
+# Only application source, dependencies and the required model enter the build context.
+**
+!Dockerfile
+!.dockerignore
+!requirements.txt
+!app.py
+!web_ui.py
+!database.py
+!services/
+services/**
+!services/*.py
+!weights/
+weights/**
+!weights/garbage_detect.pt

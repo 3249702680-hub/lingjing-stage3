@@ -2,15 +2,15 @@
 
 ## 范围与验证边界
 
-现有项目与本次可读取的上下文中未发现具体的 Linux/Docker 考核条款。本目录提供原生 Linux 部署文件；没有创建 Dockerfile 或 Compose 文件。
+本文件保留原生 Linux 部署方式。Day4 已新增容器配置，Docker 操作见 [DOCKER.md](DOCKER.md)，实际验收结果以单独记录为准。
 
-本机是 Windows，`wsl --list --quiet` 提示尚未安装 WSL，没有可用的 Docker 命令。进一步检查发现 Git for Windows 附带 Bash；已使用 `C:\Program Files\Git\bin\bash.exe -n start.sh` 对实际启动脚本完成语法检查，退出码为 0。Git Bash 不等于 Linux 运行环境；本次未执行 Linux 依赖安装、systemd 启停、Linux YOLO/Qwen 推理或 Linux 至 SQL Server 的连接验证。以下内容是待目标 Linux 主机执行的步骤，不代表已通过这些验收。
+Day3 验证时，本机是 Windows，`wsl --list --quiet` 提示尚未安装 WSL，没有可用的 Docker 命令。进一步检查发现 Git for Windows 附带 Bash；已使用 `C:\Program Files\Git\bin\bash.exe -n start.sh` 对实际启动脚本完成语法检查，退出码为 0。Git Bash 不等于 Linux 运行环境；本次未执行 Linux 依赖安装、systemd 启停、Linux YOLO/Qwen 推理或 Linux 至 SQL Server 的连接验证。以下内容是待目标 Linux 主机执行的步骤，不代表已通过这些验收。
 
 ## 准备主机
 
 1. 使用受支持的 Linux、Python 与独立虚拟环境，将第三阶段目录部署到 `/opt/lingjing-stage3`，不要复制 Windows `.venv`、上传图片、缓存或密钥。模型权重放在 `weights/garbage_detect.pt`。
 2. 安装 Microsoft ODBC Driver 18 for SQL Server；按发行版使用 [Microsoft 官方安装说明](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver17)，安装相应 unixODBC 依赖。YOLO/OpenCV 还可能需要发行版的 OpenGL/GLib 运行库（Ubuntu 通常是 `libgl1`、`libglib2.0-0`），以实际安装错误为准。
-3. 从 Linux 能访问 SQL Server 的 TCP 地址和端口；服务端启用所需的 TCP 与账号认证。Windows 主机名和本机集成认证不能直接视作 Linux 可用配置。使用专用 SQL 账号，或另行正确配置 Kerberos 集成认证。
+3. 从 Linux 能访问 SQL Server 的 TCP 地址和端口；服务端启用所需的 TCP 与账号认证。Windows 主机名和本机集成认证不能直接视作 Linux 可用配置。本项目 Linux 使用专用 SQL 账号，设置 SQLSERVER_AUTH=sql；未实现 Kerberos 集成认证。不要擅自更改服务器认证或网络安全设置。
 4. 安装 Python 依赖并确认驱动可见：
 
 ```bash
