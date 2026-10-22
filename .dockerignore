@@ -6,6 +6,7 @@
 !app.py
 !web_ui.py
 !database.py
+!security.py
 !services/
 services/**
 !services/*.py

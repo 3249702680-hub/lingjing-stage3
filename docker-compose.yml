@@ -6,6 +6,10 @@ services:
     expose:
       - "8000"
     environment:
+      AUTH_USERNAME: ${AUTH_USERNAME:-}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       SQLSERVER_AUTH: ${SQLSERVER_AUTH:-sql}
       SQLSERVER_HOST: ${SQLSERVER_HOST:-not-configured}

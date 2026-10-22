@@ -14,6 +14,7 @@ on:
       - app.py
       - database.py
       - web_ui.py
+      - security.py
       - services/**
       - scripts/ci_docker_acceptance.py
       - tests/**
@@ -74,7 +75,7 @@ jobs:
             --expected-class paper \
             --output artifacts/docker-acceptance.json 2>&1 | tee artifacts/acceptance.log
 
-      - name: Check database configuration inside Linux image
+      - name: Check authentication and database regression inside Linux image
         run: |
           set -euo pipefail
           docker run --rm \

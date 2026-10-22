@@ -1,6 +1,9 @@
 """Accept an already-built Compose image; no real Qwen/SQL credentials are used."""
 import argparse
 import hashlib
+import base64
+import hmac
+import secrets
 import json
 import math
 import os
@@ -25,14 +28,21 @@ def main():
     env = dict(os.environ)
     env.update(DASHSCOPE_API_KEY="", SQLSERVER_AUTH="sql", SQLSERVER_HOST="not-configured",
                SQLSERVER_USERNAME="", SQLSERVER_PASSWORD="", SQLSERVER_PORT="1433")
+    # CI-only credentials are generated in memory, never written to evidence.
+    ci_password = secrets.token_urlsafe(32)
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", ci_password.encode(), bytes.fromhex(salt), 600000).hex()
+    env.update(AUTH_USERNAME="ci-user", AUTH_PASSWORD_HASH=f"pbkdf2_sha256$600000${salt}${digest}",
+               JWT_SECRET=secrets.token_urlsafe(48), AUTH_COOKIE_SECURE="false")
+    bearer = None
     compose = ["docker", "compose", "-p", project, "-f", "docker-compose.yml"]
     evidence = {"ok": False, "project": project, "commit": os.environ.get("GITHUB_SHA"), "checks": [],
                 "not_verified": ["Real Qwen upstream inference", "Real SQL Server connection/writes",
                                  "Complete /analyze persistence and browser interaction"]}
     http = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
-    def command(arguments, timeout=120):
-        result = subprocess.run(arguments, env=env, capture_output=True, text=True, timeout=timeout)
+    def command(arguments, timeout=120, input_data=None):
+        result = subprocess.run(arguments, env=env, capture_output=True, text=True, timeout=timeout, input=input_data)
         if result.returncode:
             raise RuntimeError(f"Docker command exited {result.returncode}: {result.stderr[-6000:]}")
         return result.stdout.strip()
@@ -42,8 +52,11 @@ def main():
         if not passed:
             raise AssertionError(name)
 
-    def request(path, payload=None, content_type="application/json", timeout=120):
+    def request(path, payload=None, content_type="application/json", timeout=120, auth=True, token_override=None):
         headers = {"Content-Type": content_type} if payload is not None else {}
+        token = token_override if token_override is not None else bearer
+        if auth and token:
+            headers["Authorization"] = "Bearer " + token
         req = urllib.request.Request(args.base_url.rstrip("/") + path, data=payload, headers=headers)
         try:
             with http.open(req, timeout=timeout) as response:
@@ -107,7 +120,7 @@ def main():
                           "assert not os.getenv('DASHSCOPE_API_KEY'); assert not os.getenv('SQLSERVER_PASSWORD'); "
                           "print(json.dumps(sorted(str(p.relative_to('/app')) for p in Path('/app').rglob('*') if p.is_file())))")
         files = json.loads(command(["docker", "run", "--rm", "--entrypoint", "python", "lingjing-stage3:day4", "-c", inventory_code]))
-        allowed = {"app.py", "web_ui.py", "database.py", "requirements.txt", "services/__init__.py",
+        allowed = {"app.py", "web_ui.py", "database.py", "security.py", "requirements.txt", "services/__init__.py",
                    "services/yolo_service.py", "services/qwen_service.py", "weights/garbage_detect.pt"}
         check("image_contains_only_allowed_project_files", set(files) == allowed, files=files)
         command(compose + ["up", "-d", "--no-build", "nginx"], timeout=180)
@@ -120,6 +133,30 @@ def main():
         with http.open(args.base_url + "/health", timeout=10) as response:
             check("http_reaches_nginx", "nginx" in response.headers.get("Server", "").lower(), server=response.headers.get("Server"))
         nginx_id = command(compose + ["ps", "-q", "nginx"])
+        status, _ = request("/predict/yolo", b'{"filename":"paper.jpg"}', auth=False)
+        check("jwt_missing_token", status == 401, status=status)
+        login = json.dumps({"username": env["AUTH_USERNAME"], "password": ci_password}).encode()
+        status, body = request("/auth/token", login, auth=False)
+        login_result = json.loads(body)
+        check("jwt_login", status == 200 and login_result.get("token_type", "").lower() == "bearer", status=status)
+        bearer = login_result["access_token"]
+        status, body = request("/auth/me")
+        check("jwt_identity", status == 200, status=status, identity=json.loads(body))
+        wrong = json.dumps({"username": env["AUTH_USERNAME"], "password": secrets.token_urlsafe(32)}).encode()
+        status, _ = request("/auth/token", wrong, auth=False)
+        check("jwt_wrong_password", status == 401, status=status)
+        header, payload_segment, signature = bearer.split(".")
+        forged = header + "." + payload_segment + "." + ("A" if signature[0] != "A" else "B") + signature[1:]
+        status, _ = request("/auth/me", token_override=forged)
+        check("jwt_invalid_signature", status == 401, status=status)
+        claims = json.loads(base64.urlsafe_b64decode(payload_segment + "=" * (-len(payload_segment) % 4)))
+        claims["exp"] = int(time.time()) - 60
+        claims["iat"] = int(time.time()) - 120
+        expired_payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=").decode()
+        message = header + "." + expired_payload
+        expired_signature = base64.urlsafe_b64encode(hmac.new(env["JWT_SECRET"].encode(), message.encode(), hashlib.sha256).digest()).rstrip(b"=").decode()
+        status, _ = request("/auth/me", token_override=message + "." + expired_signature)
+        check("jwt_expired_token", status == 401, status=status)
         for path in ("/health", "/docs", "/ui/"):
             status, body = request(path)
             check("http_" + path, status == 200, status=status, response_bytes=len(body))
@@ -146,14 +183,14 @@ def main():
             check(route + "_missing_key_guard", status == 503 and "DASHSCOPE_API_KEY" in response.get("detail", ""),
                   status=status, response=response, real_qwen_verified=False)
         ui_probe = ("from gradio_client import Client,handle_file; import json,sys; "
-                    "client=Client('http://nginx/ui/',verbose=False); "
+                    "client=Client('http://nginx/ui/',verbose=False,headers={'Authorization':'Bearer '+sys.stdin.read().strip()}); "
                     "result=client.predict(handle_file('/app/uploads/'+sys.argv[1]),api_name='/analyze_upload'); "
                     "assert result[0] and result[1]; "
                     "assert any(d['class_name']=='paper' for d in result[2]['detections']); "
                     "assert 'API Key' in result[3]; "
                     "print(json.dumps(dict(original_image=bool(result[0]),annotated_image=bool(result[1]),"
                     "detections=result[2],qwen_guard=result[3]),ensure_ascii=False))")
-        ui_output = command(compose + ["exec", "-T", "app", "python", "-c", ui_probe, filename], timeout=120)
+        ui_output = command(compose + ["exec", "-T", "app", "python", "-c", ui_probe, filename], timeout=120, input_data=bearer)
         ui_result = json.loads(ui_output.splitlines()[-1])
         check("gradio_upload_and_streaming_via_nginx", True, result=ui_result, real_qwen_verified=False)
         guard = ("from database import engine; from sqlalchemy.exc import SQLAlchemyError\n"

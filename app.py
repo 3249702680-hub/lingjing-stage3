@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database import AnalysisRecord, SessionLocal
 from web_ui import create_ui
+from security import configure_auth
 from services.yolo_service import detect_objects
 from services.qwen_service import (
     MODEL_NAME,
@@ -276,6 +277,8 @@ def analyze(request: AnalyzeRequest):
     }
 
 
+configure_auth(app)
+
 app = gr.mount_gradio_app(
     app,
     create_ui(),
@@ -293,6 +296,7 @@ app = gr.mount_gradio_app(
             "uploads",
             "app.py",
             "web_ui.py",
+            "security.py",
             "requirements.txt",
         )
     ] + [

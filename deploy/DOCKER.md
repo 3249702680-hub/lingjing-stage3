@@ -6,7 +6,7 @@
 
 当前 Docker 镜像构建、容器启动、接口、真实 YOLO 与命名卷重建持久化已通过 GitHub Actions 实机验收。实测提交、原始 JSON 和边界见 [DOCKER_ACCEPTANCE.md](DOCKER_ACCEPTANCE.md)。Qwen、SQL Server 和长期云部署仍需要各自的真实验收。
 
-没有 Qwen 或数据库凭据时，允许启动服务并访问 `/health`、`/docs` 和 `/ui/`；本地权重和运行依赖正常时可以测试 YOLO。Qwen 调用仍需要有效 API Key，数据库访问仍需要真实可达地址、认证及数据库权限。打开网页并不等于点击“开始分析”能够完整成功；完整分析必须同时完成 YOLO、Qwen 和数据库保存。
+没有 Qwen 或数据库凭据时，允许启动服务并访问 `/health`、`/docs`；`/ui/` 和 AI 接口需先按 [AUTH.md](AUTH.md) 配置并登录；本地权重和运行依赖正常时可以测试 YOLO。Qwen 调用仍需要有效 API Key，数据库访问仍需要真实可达地址、认证及数据库权限。打开网页并不等于点击“开始分析”能够完整成功；完整分析必须同时完成 YOLO、Qwen 和数据库保存。
 
 ## 准备
 
@@ -22,6 +22,10 @@ docker compose version
 创建本地 `.env` 文件。以下只有示例配置和空凭据；请在自己的环境中补齐真实值：
 
 ```dotenv
+AUTH_USERNAME=
+AUTH_PASSWORD_HASH=
+JWT_SECRET=
+AUTH_COOKIE_SECURE=false
 DASHSCOPE_API_KEY=
 SQLSERVER_AUTH=sql
 SQLSERVER_HOST=not-configured
@@ -97,19 +101,19 @@ docker compose exec app python -c "from database import init_db; init_db()"
 
 ```bash
 curl -fsS http://127.0.0.1:8080/health
-curl -fsS -F 'file=@/absolute/path/new-sample.jpg' http://127.0.0.1:8080/upload
+curl -fsS -H "Authorization: Bearer $TOKEN" -F 'file=@/absolute/path/new-sample.jpg' http://127.0.0.1:8080/upload
 ```
 
 记录上传响应中的实际 `filename`，将下面的 `new-sample.jpg` 替换为该值：
 
 ```bash
-curl -fsS -H 'Content-Type: application/json' \
+curl -fsS -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/predict/yolo
 
-curl -fsS -H 'Content-Type: application/json' \
+curl -fsS -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/predict/qwen
 
-curl -fsS -H 'Content-Type: application/json' \
+curl -fsS -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/analyze
 ```
 
@@ -161,3 +165,5 @@ Compose 只发布 Nginx 的 `127.0.0.1:${HTTP_PORT:-8080}`，app 的 8000 只对
 CI 的所有 HTTP 验收经 Nginx 8080 入口，另用 Gradio 客户端经过代理真实上传、运行纸张 YOLO、取回原图和标注图，并检查缺 Key 提示。Gradio 当前使用 SSE；WebSocket Upgrade 配置保留兼容性。CI 同时确认 app 没有发布端口，且 app 重建后 Nginx 本身未重建、上传文件与再次推理仍正常。没有把 Qwen 缺 Key 提示算作上游成功。
 
 参考：[Gradio 官方 Nginx 部署说明](https://www.gradio.app/guides/running-gradio-on-your-web-server-with-nginx)、[Nginx WebSocket 代理](https://nginx.org/en/docs/http/websocket.html)。
+
+JWT 配置及本机启动见 [AUTH.md](AUTH.md)。上面的 HTTP 示例中 `$TOKEN` 是当前登录返回的短时 Token，不能提交或打印到 CI 证据。

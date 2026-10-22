@@ -1,3 +1,17 @@
+# Day5 Nginx 实机验收：通过
+
+- [GitHub Actions 39795471809](https://github.com/3249702680-hub/lingjing-stage3/actions/runs/39795471809)：success，实测提交 `f1bc5e67c22aad3ae0ef02287545e1bb838fab04`。
+- [原始验收 JSON](evidence/nginx-acceptance-39795471809.json)，22 项检查通过；证据包 SHA-256 `691e8594c09f0335740990a9e11247df828ff344093162309b11f5194239c25d`。
+- app 没有宿主机端口绑定；所有 HTTP 检查经过 Nginx，/health、/docs、/ui/ 全部 200。
+- 真实上传及 YOLO 返回 paper、0.9664、bbox [34.89,17.97,189.86,113.73]。
+- Gradio 客户端经过 Nginx 上传、SSE 分析并取回原图、标注图与 detections；缺 Qwen Key 的提示正常。这不是真实 Qwen 上游验收，也不宣称浏览器像素验收。
+- Nginx 未重启，app 重建后仍可访问，命名卷文件 SHA-256 一致，再次 YOLO 成功。
+- API 在运行时曾出现 run 已 success、job 仍 queued 的平台延迟；本记录依据已下载且摘要匹配的实际日志与 JSON。
+
+以下是之前 Docker 验收与失败历史，保留原始时间和范围。
+
+---
+
 # GitHub Actions Docker 实机验收：通过
 
 验收时间：2026-10-22 20:10–20:12（北京时间）。

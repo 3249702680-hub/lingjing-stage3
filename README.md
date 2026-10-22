@@ -8,7 +8,7 @@ FastAPI + Gradio 提供图片上传、YOLO 垃圾检测、Qwen3-VL 分析和 SQL
 
 ```powershell
 .\.venv\Scripts\python.exe -m py_compile app.py web_ui.py database.py
-.\.venv\Scripts\python.exe -m uvicorn app:app --reload
+.\.venv\Scripts\python.exe scripts/configure_auth.py --run
 ```
 
 如需安装依赖：
@@ -17,7 +17,7 @@ FastAPI + Gradio 提供图片上传、YOLO 垃圾检测、Qwen3-VL 分析和 SQL
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-本次 Windows 环境使用 Python 3.14.7；requirements.txt 固定了本机现有的直接依赖版本。Linux 尚需在目标环境安装与运行验证。
+本次 Windows 环境使用 Python 3.14.7；requirements.txt 固定了本机现有的直接依赖版本。Linux Docker 与 Nginx 已通过真实 CI 验收；独立云主机部署仍未验证。
 
 - 网页：[http://127.0.0.1:8000/ui/](http://127.0.0.1:8000/ui/)
 - 接口文档：[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
@@ -55,6 +55,10 @@ with engine.begin() as connection:
 
 网页与 `/analyze` 仅在 YOLO 和 Qwen 均成功后写入 `dbo.analysis_records`，保存 `filename`、`yolo_result`、`qwen_answer` 和 `created_at`。数据库写入失败时不能把模型分析成功当作持久化成功。`/predict/yolo`、`/predict/qwen` 单独调用不会保存分析记录。
 
+## 身份认证
+
+先按 [JWT 配置与登录说明](deploy/AUTH.md) 设置自己的账户。网页从 `/login` 登录，API 使用 `/auth/token` 返回的 Bearer Token。Token 15 分钟过期；上传、推理、联合分析与整个 Gradio 路径均受保护。未配置认证时保护接口返回 503，健康检查和文档仍可访问。Docker 通过 Nginx `http://127.0.0.1:8080` 访问；原生服务仍为 8000。
+
 ## API 实际使用
 
 | 方法 | 路径 | 请求与返回 |
@@ -67,12 +71,13 @@ with engine.begin() as connection:
 | POST | `/predict/qwen` | 同上；返回 model 与 answer |
 | POST | `/analyze` | 同上；返回两种模型的真实结果和 record_id |
 
-例如在 PowerShell 中上传并分析本机图片：
+例如先将 `/auth/token` 返回的 access_token 保存在当前终端 `$token` 变量，再上传并分析本机图片（不要保存 Token 到脚本）：
 
 ```powershell
-curl.exe -F "file=@C:\path\sample.jpg" http://127.0.0.1:8000/upload
+curl.exe -H "Authorization: Bearer $token" -F "file=@C:\path\sample.jpg" http://127.0.0.1:8000/upload
+$headers = @{ Authorization = "Bearer $token" }
 $body = @{ filename = 'sample.jpg' } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/analyze -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Method Post -Headers $headers -Uri http://127.0.0.1:8000/analyze -ContentType 'application/json' -Body $body
 ```
 
 使用新文件名上传；同名文件返回 409，非图片类型返回 400。Qwen 配置缺失、上游失败或超时分别返回 503、502、504。
