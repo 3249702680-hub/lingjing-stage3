@@ -12,7 +12,7 @@ WORKDIR /app
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl g++ unixodbc unixodbc-dev libgssapi-krb5-2 libgl1 libglib2.0-0 \
+       ca-certificates curl unixodbc libgssapi-krb5-2 \
     && curl -fsSLo /tmp/packages-microsoft-prod.deb \
        https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
     && dpkg -i /tmp/packages-microsoft-prod.deb \
@@ -22,10 +22,13 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+# The official headless distribution preserves the ultralytics Python API and
+# version while avoiding desktop OpenGL/LLVM dependencies in this web server.
+RUN sed 's/^ultralytics==/ultralytics-opencv-headless==/' requirements.txt > /tmp/requirements-container.txt \
+    && python -m pip install --index-url https://download.pytorch.org/whl/cpu \
         torch==2.14.1+cpu torchvision==0.29.1+cpu \
     && printf 'torch==2.14.1+cpu\ntorchvision==0.29.1+cpu\n' > /tmp/torch-constraints.txt \
-    && python -m pip install -c /tmp/torch-constraints.txt -r requirements.txt \
+    && python -m pip install --only-binary=pyodbc,opencv-python-headless -c /tmp/torch-constraints.txt -r /tmp/requirements-container.txt \
     && python -m pip check
 
 RUN groupadd --gid 10001 app \

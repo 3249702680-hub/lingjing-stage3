@@ -1,0 +1,102 @@
+name: Docker acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - docker-compose.yml
+      - requirements.txt
+      - weights/garbage_detect.pt
+      - app.py
+      - database.py
+      - web_ui.py
+      - services/**
+      - scripts/ci_docker_acceptance.py
+      - tests/**
+      - .github/workflows/docker-acceptance.yml
+
+permissions:
+  contents: read
+
+jobs:
+  docker-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: lingjing-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      DASHSCOPE_API_KEY: ""
+      SQLSERVER_AUTH: sql
+      SQLSERVER_HOST: not-configured
+      SQLSERVER_USERNAME: ""
+      SQLSERVER_PASSWORD: ""
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate tracked files and Compose
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python3 - <<'PY'
+          import pathlib, subprocess
+          files = subprocess.check_output(['git', 'ls-files'], text=True).splitlines()
+          for name in files:
+              parts = pathlib.PurePosixPath(name).parts
+              assert not any(p in {'.venv', '__pycache__', '.env'} or p.startswith('.env.') for p in parts), name
+              assert not name.endswith(('.pyc', '.pyo')), name
+              assert not name.startswith('uploads/') or name == 'uploads/.gitkeep', name
+          print('Tracked files contain no runtime environment, caches or uploaded images.')
+          PY
+          docker version > artifacts/docker-version.txt
+          docker compose config --quiet
+          git rev-parse HEAD > artifacts/commit.txt
+
+      - name: Build current Dockerfile
+        run: |
+          set -euo pipefail
+          docker compose --progress plain build 2>&1 | tee artifacts/build.log
+
+      - name: Run real container acceptance
+        run: |
+          set -euo pipefail
+          python3 scripts/ci_docker_acceptance.py \
+            --image tests/fixtures/paper.jpg \
+            --expected-class paper \
+            --output artifacts/docker-acceptance.json 2>&1 | tee artifacts/acceptance.log
+
+      - name: Check database configuration inside Linux image
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --env SQLSERVER_AUTH=sql \
+            --mount "type=bind,source=$PWD/tests,target=/app/tests,readonly" \
+            lingjing-stage3:day4 \
+            python -m unittest discover -s tests -v 2>&1 | tee artifacts/database-config.log
+
+      - name: Collect container diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts
+          docker compose ps -a > artifacts/compose-status.txt 2>&1 || true
+          docker compose logs --no-color > artifacts/container.log 2>&1 || true
+
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docker-acceptance-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Clean up this isolated CI project
+        if: always()
+        run: docker compose down --volumes --remove-orphans

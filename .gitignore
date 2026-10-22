@@ -19,3 +19,6 @@ logs/
 runs/
 *.bak
 *.tmp
+
+# Generated CI/runtime acceptance evidence
+artifacts/
