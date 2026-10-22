@@ -1,3 +1,38 @@
+# GitHub Actions Docker 实机验收：通过
+
+验收时间：2026-10-22 20:10–20:12（北京时间）。
+
+- [真实工作流运行 #1](https://github.com/3249702680-hub/lingjing-stage3/actions/runs/39776167901)：success。
+- 实测代码提交：`05ce97a01c4363d2c54186759ef1e1912d0e10f4`。
+- 环境：GitHub 托管 Ubuntu 24.04，真实 Docker Engine；镜像构建约 76 秒，容器自动验收约 25 秒。
+- [永久保存的原始验收 JSON](evidence/docker-acceptance-39776167901.json)。完整构建、容器及测试日志位于运行页面的 artifact（保留 7 天）。
+- 下载证据包 SHA-256 与 GitHub 公布摘要一致：`1d388f9469bcad46bd45080c457dc3e60cc71c2fbf895a22c3cb33bc55c7860e`。
+
+| 实际检查 | 结果 |
+| --- | --- |
+| 当前 Dockerfile 构建、pip check | 通过 |
+| 容器启动及 Docker HEALTHCHECK | running / healthy |
+| GET /health、/docs、/ui/ | 全部 HTTP 200 |
+| 真实纸张 JPEG 上传 | HTTP 200，使用独立 UUID 文件名 |
+| POST /predict/yolo | HTTP 200；paper；confidence 0.9664 |
+| YOLO bbox | [34.89, 17.97, 189.86, 113.73] |
+| 非 root / CPU 依赖 | UID 10001；torch 2.14.1+cpu；torchvision 0.29.1+cpu；CUDA 为 null |
+| ODBC | ODBC Driver 18 for SQL Server 已加载 |
+| 上传持久化 | 新旧容器 ID 不同、命名卷相同，文件 SHA-256 一致，再次 YOLO 成功 |
+| 上传文件 SHA-256 | cdfb2e4528c26fb3faebda47fe7732d5a8ae9d96b81bcc629487adc8427dd21f |
+| 镜像项目文件检查 | 只包含 8 个白名单文件；无 .env、Git、虚拟环境、缓存或测试图片 |
+| Linux 数据库配置回归 | 6 项 unittest 全部通过 |
+
+为解决慢速下载，Docker 使用官方同版本 `ultralytics-opencv-headless==8.4.182`，保留 `ultralytics` Python 导入接口及 CPU PyTorch pin，省去编译器与桌面图形依赖。原 requirements.txt、AI 业务代码和模型权重未改。
+
+**验收边界：** CI 明确清空 DASHSCOPE_API_KEY 和 SQL 账号密码，不需要仓库业务 secrets。缺 Key 的 /predict/qwen、/analyze 实际返回 503；缺 SQL 配置在连接前被拒绝。这些只验证错误保护，不代表真实 Qwen、SQL Server 或完整 /analyze 保存通过。/ui/ 的 HTTP 200 只确认页面可访问，未替代浏览器交互验收。
+
+GitHub Actions 是临时验收环境，工作流结束会清理本次独立容器与卷；命名卷持久化已在清理前完成验证。它不代表长期云服务器或公网部署已完成。其他原始考核缺项见 [STAGE3_GAPS.md](STAGE3_GAPS.md)。
+
+以下保留此前的静态检查、Windows 回归及 VirtualBox 失败历史；不将这些历史结果作为本次容器成功的依据。
+
+---
+
 # Day4 Docker 验收记录
 
 日期：2026-10-22（北京时间）。本记录保留失败与未执行项目，不将 Windows 结果替代 Linux 容器验收。
@@ -8,7 +43,7 @@
 
 本次交付 Dockerfile、构建上下文白名单、Compose、数据库环境变量认证适配、回归测试和部署说明。app.py、web_ui.py、两个 AI 服务、requirements.txt 和模型权重保持原样，未修改第二阶段。
 
-## 实际环境与构建结果
+## 历史记录：此前 VirtualBox 构建尝试
 
 - Windows / Codex 执行环境没有本机 Docker 引擎；不能使用 Windows API 成功来证明容器成功。
 - VirtualBox Ubuntu 实际版本为 26.04.1 LTS，x86_64；Docker Engine 29.1.3、Buildx、Compose 2.40.3 已实际安装。
@@ -18,7 +53,7 @@
 - 已将 Dockerfile 中 Debian 官方软件源切换为 HTTPS。该修复后的完整构建尚未通过；本轮恢复虚拟机保存状态返回成功后，再次检查为 poweroff，未继续反复启动。
 - 代理仅用于目标虚拟机的临时 Docker 运行环境和构建请求，没有写入 Dockerfile、Compose 或 Git；没有传输 Qwen Key 或数据库密码。
 
-**结论：镜像未构建成功，应用容器未启动，容器内接口与持久卷尚未验收。**
+**上述 VirtualBox 尝试当时未成功；本次 Docker 实机验收已由以下 GitHub Actions 运行完成。**
 
 ## 已通过检查
 
@@ -41,7 +76,7 @@
 - 选择 SQL 认证且未配置账号时，/analyze 在模型分析后返回 500 和通用保存失败提示；这是错误处理验证，不代表数据库保存成功。
 - Windows localhost 集成认证只读查询成功；服务器允许混合认证，analysis_records 当时有 7 条记录。没有修改数据库安全设置。
 
-## 尚未验收与恢复条件
+## 历史记录：当时的恢复条件（Docker 基础验收现已通过 CI）
 
 1. 在 Ubuntu 保持运行、Docker 客户端和引擎均能通过有效网络访问官方仓库、Debian HTTPS、Microsoft 软件源与 PyTorch CPU 索引后，按 [DOCKER.md](DOCKER.md) 重新构建。
 2. 构建成功后仍需启动容器，验证 /health、/docs、/ui/、真实图片上传、YOLO、非 root 权限、ODBC Driver 18 和上传卷重建持久化。

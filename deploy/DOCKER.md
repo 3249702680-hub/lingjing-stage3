@@ -2,9 +2,9 @@
 
 ## 范围与当前状态
 
-本方案运行 FastAPI、Gradio 和 CPU YOLO，数据库使用可从容器访问的外部 SQL Server。镜像基于 Python 3.12 slim / Debian 12（bookworm），安装 unixODBC、Microsoft ODBC Driver 18、OpenCV 运行库，以及 CPU 版 torch 2.14.1+cpu、torchvision 0.29.1+cpu；应用使用 UID 10001 的非 root 用户，直接由 Uvicorn 监听容器的 `0.0.0.0:8000`，不经过原生 Linux 的 `start.sh`。
+本方案运行 FastAPI、Gradio 和 CPU YOLO，数据库使用可从容器访问的外部 SQL Server。镜像基于 Python 3.12 slim / Debian 12（bookworm），安装 unixODBC、Microsoft ODBC Driver 18、官方同版本 Ultralytics headless / OpenCV headless，以及 CPU 版 torch 2.14.1+cpu、torchvision 0.29.1+cpu；应用使用 UID 10001 的非 root 用户，直接由 Uvicorn 监听容器的 `0.0.0.0:8000`，不经过原生 Linux 的 `start.sh`。
 
-本文件提供部署步骤。当前完整镜像构建和容器运行尚未通过验收；实际执行环境、网络失败原因和未验收项目见 [DOCKER_ACCEPTANCE.md](DOCKER_ACCEPTANCE.md)。
+当前 Docker 镜像构建、容器启动、接口、真实 YOLO 与命名卷重建持久化已通过 GitHub Actions 实机验收。实测提交、原始 JSON 和边界见 [DOCKER_ACCEPTANCE.md](DOCKER_ACCEPTANCE.md)。Qwen、SQL Server 和长期云部署仍需要各自的真实验收。
 
 没有 Qwen 或数据库凭据时，允许启动服务并访问 `/health`、`/docs` 和 `/ui/`；本地权重和运行依赖正常时可以测试 YOLO。Qwen 调用仍需要有效 API Key，数据库访问仍需要真实可达地址、认证及数据库权限。打开网页并不等于点击“开始分析”能够完整成功；完整分析必须同时完成 YOLO、Qwen 和数据库保存。
 
@@ -137,3 +137,14 @@ docker compose up -d
 - [Docker Compose 入门](https://docs.docker.com/compose/gettingstarted/)
 - [Compose 环境变量](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/)
 - [微软 Linux ODBC Driver 18 安装说明](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver17)
+
+
+## GitHub Actions 验收
+
+工作流位于 `.github/workflows/docker-acceptance.yml`。推送涉及 Docker、应用、模型权重或测试的 main 提交时自动运行，也可以在 GitHub Actions 的 Docker acceptance 页面点击 Run workflow。
+
+它构建当前 Dockerfile，上传 `tests/fixtures/paper.jpg`，测试 /health、/docs、/ui/、YOLO、ODBC/CPU/非 root 配置及命名卷重建后的文件哈希与再次推理。测试样本不进入镜像。CI 不配置真实 Qwen Key 或数据库密码，外部服务的缺配置保护与真实调用分别记录。
+
+构建、运行日志与 JSON 始终上传为 artifact；任何必须检查失败都会使 job 失败。验收后的清理只针对该 run 独有的 Compose 项目，独立命名卷已在清理前完成重建持久化验证。该工作流只验收应用容器，不自动部署长期公网服务。
+
+Docker 内按 requirements.txt 中相同版本使用官方 `ultralytics-opencv-headless` 分发，不改变本地 Windows 依赖文件和 `from ultralytics import YOLO`。pyodbc 与 OpenCV 要求二进制 wheel，避免下载编译器及桌面 OpenGL/LLVM。参见 [Ultralytics 官方安装说明](https://docs.ultralytics.com/quickstart/) 和 [同版本分发](https://pypi.org/project/ultralytics-opencv-headless/8.4.182/)。

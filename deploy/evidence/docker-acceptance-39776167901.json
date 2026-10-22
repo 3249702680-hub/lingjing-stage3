@@ -1,0 +1,182 @@
+{
+  "ok": true,
+  "project": "lingjing-ci-39776167901-1",
+  "commit": "05ce97a01c4363d2c54186759ef1e1912d0e10f4",
+  "checks": [
+    {
+      "name": "compose_project_name",
+      "ok": true
+    },
+    {
+      "name": "real_jpeg_fixture",
+      "ok": true
+    },
+    {
+      "name": "image_contains_only_allowed_project_files",
+      "ok": true,
+      "files": [
+        "app.py",
+        "database.py",
+        "requirements.txt",
+        "services/__init__.py",
+        "services/qwen_service.py",
+        "services/yolo_service.py",
+        "web_ui.py",
+        "weights/garbage_detect.pt"
+      ]
+    },
+    {
+      "name": "uploads_is_named_volume",
+      "ok": true,
+      "mount": {
+        "Type": "volume",
+        "Name": "lingjing-ci-39776167901-1_uploads",
+        "Source": "/var/lib/docker/volumes/lingjing-ci-39776167901-1_uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    },
+    {
+      "name": "http_/health",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 15
+    },
+    {
+      "name": "http_/docs",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 1006
+    },
+    {
+      "name": "http_/ui/",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 28582
+    },
+    {
+      "name": "nonroot_cpu_torch_odbc",
+      "ok": true,
+      "runtime": {
+        "uid": 10001,
+        "torch": "2.14.1+cpu",
+        "torchvision": "0.29.1+cpu",
+        "cuda": null,
+        "opencv": "5.0.0",
+        "drivers": [
+          "ODBC Driver 18 for SQL Server"
+        ]
+      }
+    },
+    {
+      "name": "upload",
+      "ok": true,
+      "status": 200,
+      "filename": "ci_paper_c5d5a835e02a4c39b65a947cdda27b4e.jpg"
+    },
+    {
+      "name": "yolo_before_recreate",
+      "ok": true,
+      "status": 200,
+      "result": {
+        "filename": "ci_paper_c5d5a835e02a4c39b65a947cdda27b4e.jpg",
+        "detections": [
+          {
+            "class_name": "paper",
+            "confidence": 0.9664,
+            "bbox": [
+              34.89,
+              17.97,
+              189.86,
+              113.73
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "/predict/qwen_missing_key_guard",
+      "ok": true,
+      "status": 503,
+      "response": {
+        "detail": "DASHSCOPE_API_KEY is not configured"
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "/analyze_missing_key_guard",
+      "ok": true,
+      "status": 503,
+      "response": {
+        "detail": "DASHSCOPE_API_KEY is not configured"
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "database_missing_credentials_guard",
+      "ok": true,
+      "real_database_verified": false
+    },
+    {
+      "name": "uploads_is_named_volume",
+      "ok": true,
+      "mount": {
+        "Type": "volume",
+        "Name": "lingjing-ci-39776167901-1_uploads",
+        "Source": "/var/lib/docker/volumes/lingjing-ci-39776167901-1_uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    },
+    {
+      "name": "recreated_container_same_volume",
+      "ok": true,
+      "old_container": "45b5cfbc9ab21232b7ef5edf72a7800bca4023fcff0050a6d9054b0867679281",
+      "new_container": "b2257c471ceb6809d56b8851d8fe002921bd0ba6944c552a240bf9f2f90dd4a8",
+      "volume": "lingjing-ci-39776167901-1_uploads"
+    },
+    {
+      "name": "uploaded_bytes_survive_recreate",
+      "ok": true,
+      "sha256": "cdfb2e4528c26fb3faebda47fe7732d5a8ae9d96b81bcc629487adc8427dd21f"
+    },
+    {
+      "name": "yolo_after_recreate",
+      "ok": true,
+      "status": 200,
+      "result": {
+        "filename": "ci_paper_c5d5a835e02a4c39b65a947cdda27b4e.jpg",
+        "detections": [
+          {
+            "class_name": "paper",
+            "confidence": 0.9664,
+            "bbox": [
+              34.89,
+              17.97,
+              189.86,
+              113.73
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "not_verified": [
+    "Real Qwen upstream inference",
+    "Real SQL Server connection/writes",
+    "Complete /analyze persistence and browser interaction"
+  ],
+  "fixture": {
+    "name": "paper.jpg",
+    "sha256": "cdfb2e4528c26fb3faebda47fe7732d5a8ae9d96b81bcc629487adc8427dd21f",
+    "expected_class": "paper"
+  },
+  "image_id": "sha256:59c26f23e450d77a0b180193af301082f39e6e9695c4ef48ff29d2210e04ca3b",
+  "container_logs": "app-1  | INFO:     Started server process [7]\napp-1  | INFO:     Waiting for application startup.\napp-1  | INFO:     Application startup complete.\napp-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)\napp-1  | INFO:     172.18.0.1:42934 - \"GET /health HTTP/1.1\" 200 OK\napp-1  | INFO:     127.0.0.1:33322 - \"GET /health HTTP/1.1\" 200 OK\napp-1  | Creating new Ultralytics Settings v0.0.8 file ✅ \napp-1  | View Ultralytics Settings with 'yolo settings' or at '/home/app/.config/Ultralytics/Ultralytics/settings.json'\napp-1  | Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings.\napp-1  | INFO:     172.18.0.1:54864 - \"POST /predict/yolo HTTP/1.1\" 200 OK"
+}
