@@ -1,0 +1,356 @@
+{
+  "ok": true,
+  "project": "lingjing-ci-39800419193-1",
+  "commit": "48a073a16a1d37b661392bdc6b288031c95887e3",
+  "checks": [
+    {
+      "name": "compose_project_name",
+      "ok": true
+    },
+    {
+      "name": "real_jpeg_fixture",
+      "ok": true
+    },
+    {
+      "name": "image_contains_only_allowed_project_files",
+      "ok": true,
+      "files": [
+        "app.py",
+        "database.py",
+        "job_queue.py",
+        "requirements.txt",
+        "security.py",
+        "services/__init__.py",
+        "services/qwen_service.py",
+        "services/yolo_service.py",
+        "web_ui.py",
+        "weights/garbage_detect.pt",
+        "worker.py"
+      ]
+    },
+    {
+      "name": "uploads_is_named_volume",
+      "ok": true,
+      "mount": {
+        "Type": "volume",
+        "Name": "lingjing-ci-39800419193-1_uploads",
+        "Source": "/var/lib/docker/volumes/lingjing-ci-39800419193-1_uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    },
+    {
+      "name": "app_port_not_published",
+      "ok": true,
+      "port_bindings": {}
+    },
+    {
+      "name": "nginx_configuration",
+      "ok": true
+    },
+    {
+      "name": "http_reaches_nginx",
+      "ok": true,
+      "server": "nginx"
+    },
+    {
+      "name": "jwt_missing_token",
+      "ok": true,
+      "status": 401
+    },
+    {
+      "name": "jwt_login",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "jwt_identity",
+      "ok": true,
+      "status": 200,
+      "identity": {
+        "username": "ci-user"
+      }
+    },
+    {
+      "name": "jwt_wrong_password",
+      "ok": true,
+      "status": 401
+    },
+    {
+      "name": "jwt_invalid_signature",
+      "ok": true,
+      "status": 401
+    },
+    {
+      "name": "jwt_expired_token",
+      "ok": true,
+      "status": 401
+    },
+    {
+      "name": "http_/health",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 15
+    },
+    {
+      "name": "http_/docs",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 1006
+    },
+    {
+      "name": "http_/ui/",
+      "ok": true,
+      "status": 200,
+      "response_bytes": 28582
+    },
+    {
+      "name": "nonroot_cpu_torch_odbc",
+      "ok": true,
+      "runtime": {
+        "uid": 10001,
+        "torch": "2.14.1+cpu",
+        "torchvision": "0.29.1+cpu",
+        "cuda": null,
+        "opencv": "5.0.0",
+        "drivers": [
+          "ODBC Driver 18 for SQL Server"
+        ]
+      }
+    },
+    {
+      "name": "upload",
+      "ok": true,
+      "status": 200,
+      "filename": "ci_paper_cd46491410ac468fb9b435d066a08440.jpg"
+    },
+    {
+      "name": "yolo_before_recreate",
+      "ok": true,
+      "status": 200,
+      "result": {
+        "filename": "ci_paper_cd46491410ac468fb9b435d066a08440.jpg",
+        "detections": [
+          {
+            "class_name": "paper",
+            "confidence": 0.9664,
+            "bbox": [
+              34.89,
+              17.97,
+              189.86,
+              113.73
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "queue_requires_jwt",
+      "ok": true,
+      "status": 401
+    },
+    {
+      "name": "consumer_initially_stopped",
+      "ok": true
+    },
+    {
+      "name": "queue_submit_accepted",
+      "ok": true,
+      "status": 202,
+      "response": {
+        "job_id": "b36313d1-d9d9-4baf-a189-561ec9909f15",
+        "status": "queued"
+      }
+    },
+    {
+      "name": "queue_pending_without_consumer",
+      "ok": true,
+      "response": {
+        "job_id": "b36313d1-d9d9-4baf-a189-561ec9909f15",
+        "status": "queued"
+      }
+    },
+    {
+      "name": "redis_not_exposed",
+      "ok": true
+    },
+    {
+      "name": "queued_job_survives_redis_recreation",
+      "ok": true,
+      "response": {
+        "job_id": "b36313d1-d9d9-4baf-a189-561ec9909f15",
+        "status": "queued"
+      }
+    },
+    {
+      "name": "queue_real_yolo_result",
+      "ok": true,
+      "response": {
+        "job_id": "b36313d1-d9d9-4baf-a189-561ec9909f15",
+        "status": "finished",
+        "result": {
+          "filename": "ci_paper_cd46491410ac468fb9b435d066a08440.jpg",
+          "detections": [
+            {
+              "class_name": "paper",
+              "confidence": 0.9664,
+              "bbox": [
+                34.89,
+                17.97,
+                189.86,
+                113.73
+              ]
+            }
+          ]
+        },
+        "worker": {
+          "hostname": "073b8b4d7003",
+          "pid": 9
+        }
+      }
+    },
+    {
+      "name": "separate_worker_consumed_job",
+      "ok": true
+    },
+    {
+      "name": "queue_analyze_accepted",
+      "ok": true,
+      "status": 202
+    },
+    {
+      "name": "queue_missing_qwen_is_failed",
+      "ok": true,
+      "response": {
+        "job_id": "3a4f8559-409c-4898-8844-9847c13d44bd",
+        "status": "failed",
+        "error": {
+          "status_code": 503,
+          "detail": "DASHSCOPE_API_KEY is not configured"
+        },
+        "worker": {
+          "hostname": "073b8b4d7003",
+          "pid": 24
+        }
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "queue_rejects_unsafe_filename",
+      "ok": true,
+      "status": 400
+    },
+    {
+      "name": "/predict/qwen_missing_key_guard",
+      "ok": true,
+      "status": 503,
+      "response": {
+        "detail": "DASHSCOPE_API_KEY is not configured"
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "/analyze_missing_key_guard",
+      "ok": true,
+      "status": 503,
+      "response": {
+        "detail": "DASHSCOPE_API_KEY is not configured"
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "gradio_upload_and_streaming_via_nginx",
+      "ok": true,
+      "result": {
+        "original_image": true,
+        "annotated_image": true,
+        "detections": {
+          "detections": [
+            {
+              "class_name": "paper",
+              "confidence": 0.9664,
+              "bbox": [
+                34.89,
+                17.97,
+                189.86,
+                113.73
+              ]
+            }
+          ]
+        },
+        "qwen_guard": "Qwen 服务未配置 API Key，请检查环境变量并重启服务。"
+      },
+      "real_qwen_verified": false
+    },
+    {
+      "name": "database_missing_credentials_guard",
+      "ok": true,
+      "real_database_verified": false
+    },
+    {
+      "name": "uploads_is_named_volume",
+      "ok": true,
+      "mount": {
+        "Type": "volume",
+        "Name": "lingjing-ci-39800419193-1_uploads",
+        "Source": "/var/lib/docker/volumes/lingjing-ci-39800419193-1_uploads/_data",
+        "Destination": "/app/uploads",
+        "Driver": "local",
+        "Mode": "rw",
+        "RW": true,
+        "Propagation": ""
+      }
+    },
+    {
+      "name": "nginx_survives_app_recreation",
+      "ok": true
+    },
+    {
+      "name": "recreated_container_same_volume",
+      "ok": true,
+      "old_container": "eaa9607fbac26001d09913b9acdcf57bdb77a2bbe83270608470e1990529fc9e",
+      "new_container": "089a9cfd3345fee3c29ea03ab0e2c011cee4dec041dae1a35e565f5ef3c5c472",
+      "volume": "lingjing-ci-39800419193-1_uploads"
+    },
+    {
+      "name": "uploaded_bytes_survive_recreate",
+      "ok": true,
+      "sha256": "cdfb2e4528c26fb3faebda47fe7732d5a8ae9d96b81bcc629487adc8427dd21f"
+    },
+    {
+      "name": "yolo_after_recreate",
+      "ok": true,
+      "status": 200,
+      "result": {
+        "filename": "ci_paper_cd46491410ac468fb9b435d066a08440.jpg",
+        "detections": [
+          {
+            "class_name": "paper",
+            "confidence": 0.9664,
+            "bbox": [
+              34.89,
+              17.97,
+              189.86,
+              113.73
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "not_verified": [
+    "Real Qwen upstream inference",
+    "Real SQL Server connection/writes",
+    "Complete /analyze persistence and browser interaction"
+  ],
+  "fixture": {
+    "name": "paper.jpg",
+    "sha256": "cdfb2e4528c26fb3faebda47fe7732d5a8ae9d96b81bcc629487adc8427dd21f",
+    "expected_class": "paper"
+  },
+  "image_id": "sha256:e5d086cab26341607f90999d6b90a2897589543fbff3b66bdfdc212c4780e3c2",
+  "container_logs": "app-1    | INFO:     Started server process [7]\napp-1    | INFO:     Waiting for application startup.\napp-1    | INFO:     Application startup complete.\napp-1    | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)\napp-1    | INFO:     172.18.0.4:41990 - \"GET /health HTTP/1.1\" 200 OK\napp-1    | INFO:     127.0.0.1:54304 - \"GET /health HTTP/1.1\" 200 OK\napp-1    | Creating new Ultralytics Settings v0.0.8 file ✅ \napp-1    | View Ultralytics Settings with 'yolo settings' or at '/home/app/.config/Ultralytics/Ultralytics/settings.json'\napp-1    | Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings.\napp-1    | INFO:     172.18.0.4:41998 - \"POST /predict/yolo HTTP/1.1\" 200 OK\nnginx-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\nnginx-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/\nnginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh\nnginx-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)\nnginx-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh\nnginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh\nnginx-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh\nnginx-1  | /docker-entrypoint.sh: Configuration complete; ready for start up\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: using the \"epoll\" event method\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: nginx/1.30.6\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) \nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: OS: Linux 6.17.0-1022-azure\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 65536:65536\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: start worker processes\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: start worker process 21\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: start worker process 22\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: start worker process 23\nnginx-1  | 2026/10/22 14:59:55 [notice] 1#1: start worker process 24\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"POST /predict/yolo HTTP/1.1\" 401 46 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"POST /auth/token HTTP/1.1\" 200 279 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /auth/me HTTP/1.1\" 200 22 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"POST /auth/token HTTP/1.1\" 401 46 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /auth/me HTTP/1.1\" 401 46 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /auth/me HTTP/1.1\" 401 46 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /docs HTTP/1.1\" 200 1006 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:14:59:57 +0000] \"GET /ui/ HTTP/1.1\" 200 28582 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 127.0.0.1 - - [22/Oct/2026:15:00:00 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Wget\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:01 +0000] \"POST /upload HTTP/1.1\" 200 157 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:04 +0000] \"POST /predict/yolo HTTP/1.1\" 200 153 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:04 +0000] \"POST /jobs HTTP/1.1\" 401 46 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:04 +0000] \"POST /jobs HTTP/1.1\" 202 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:04 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:05 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 127.0.0.1 - - [22/Oct/2026:15:00:10 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Wget\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:10 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:11 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:12 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:13 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:14 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:15 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:16 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:17 +0000] \"GET /jobs/b36313d1-d9d9-4baf-a189-561ec9909f15 HTTP/1.1\" 200 277 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:17 +0000] \"POST /jobs HTTP/1.1\" 202 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1  | 172.18.0.1 - - [22/Oct/2026:15:00:17 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 67 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:18 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:19 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 127.0.0.1 - - [22/Oct/2026:15:00:20 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Wget\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:20 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:21 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:22 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 68 \"-\" \"Python-urllib/3.12\" \"-\"\nredis-1   | 1:C 22 Oct 2026 15:00:05.111 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.\nredis-1   | 1:C 22 Oct 2026 15:00:05.112 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo\nredis-1   | 1:C 22 Oct 2026 15:00:05.112 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started\nredis-1   | 1:C 22 Oct 2026 15:00:05.112 * Configuration loaded\nredis-1   | 1:M 22 Oct 2026 15:00:05.112 * monotonic clock: POSIX clock_gettime\nredis-1   | 1:M 22 Oct 2026 15:00:05.112 * Running mode=standalone, port=6379.\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Server initialized\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Reading RDB base file on AOF loading...\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Loading RDB produced by version 7.4.11\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * RDB age 21 seconds\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:23 +0000] \"GET /jobs/3a4f8559-409c-4898-8844-9847c13d44bd HTTP/1.1\" 200 188 \"-\" \"Python-urllib/3.12\" \"-\"\nworker-1  | 15:00:11 Worker analysis-073b8b4d7003: started with PID 7, version 2.12.0\nworker-1  | 15:00:11 Worker analysis-073b8b4d7003: subscribing to channel rq:pubsub:analysis-073b8b4d7003\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * RDB memory usage when created 0.90 Mb\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * RDB is base AOF\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Done loading RDB, keys loaded: 0, keys expired: 0.\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * DB loaded from base file appendonly.aof.1.base.rdb: 0.000 seconds\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * DB loaded from incr file appendonly.aof.1.incr.aof: 0.000 seconds\nworker-1  | 15:00:11 *** Listening on analysis...\nworker-1  | 15:00:11 Worker analysis-073b8b4d7003: cleaning registries for queue: analysis\nworker-1  | 15:00:11 Worker analysis-073b8b4d7003: analysis: b36313d1-d9d9-4baf-a189-561ec9909f15\nworker-1  | Creating new Ultralytics Settings v0.0.8 file ✅ \nworker-1  | View Ultralytics Settings with 'yolo settings' or at '/home/app/.config/Ultralytics/Ultralytics/settings.json'\nworker-1  | Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings.\nworker-1  | 15:00:16 Successfully completed job b36313d1-d9d9-4baf-a189-561ec9909f15 in 0:00:05.679032s on worker analysis-073b8b4d7003\nworker-1  | 15:00:16 Worker analysis-073b8b4d7003: analysis: Job OK (b36313d1-d9d9-4baf-a189-561ec9909f15)\nworker-1  | 15:00:16 Worker analysis-073b8b4d7003: job b36313d1-d9d9-4baf-a189-561ec9909f15 result is kept for 3600 seconds\nworker-1  | 15:00:17 Worker analysis-073b8b4d7003: analysis: 3a4f8559-409c-4898-8844-9847c13d44bd\nworker-1  | 15:00:23 Successfully completed job 3a4f8559-409c-4898-8844-9847c13d44bd in 0:00:05.570277s on worker analysis-073b8b4d7003\nworker-1  | 15:00:23 Worker analysis-073b8b4d7003: analysis: Job OK (3a4f8559-409c-4898-8844-9847c13d44bd)\nworker-1  | 15:00:23 Worker analysis-073b8b4d7003: job 3a4f8559-409c-4898-8844-9847c13d44bd result is kept for 3600 seconds\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:23 +0000] \"POST /jobs HTTP/1.1\" 400 29 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:23 +0000] \"POST /predict/qwen HTTP/1.1\" 503 48 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:23 +0000] \"POST /analyze HTTP/1.1\" 503 48 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:24 +0000] \"GET /ui/config HTTP/1.1\" 200 18139 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:24 +0000] \"GET /ui/gradio_api/info?serialize=False HTTP/1.1\" 200 5714 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:24 +0000] \"POST /ui/gradio_api/upload HTTP/1.1\" 200 126 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:24 +0000] \"POST /ui/gradio_api/queue/join HTTP/1.1\" 200 47 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:25 +0000] \"GET /ui/gradio_api/queue/data?session_hash=0169e18e-96b5-4a0c-9806-8262498f8bfe HTTP/1.1\" 200 1545 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:25 +0000] \"GET /ui/gradio_api/file=/tmp/gradio/dbf5f8374f69ce98b35e91121ef35260da00991a7cfa6c2c24628ff2e172de3b/image.png HTTP/1.1\" 200 16218 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 172.18.0.3 - - [22/Oct/2026:15:00:25 +0000] \"GET /ui/gradio_api/file=/tmp/gradio/cca6c940dafd1dfcd2e0b41c0eb9185931a1fcc17950734cce23e9c00b02bc11/image.png HTTP/1.1\" 200 17048 \"-\" \"gradio_client/2.7.2; hf_hub/2.2.0; python/3.12.15; torch/2.14.1+cpu\" \"-\"\nnginx-1   | 2026/10/22 15:00:27 [error] 23#23: *97 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.1, server: _, request: \"GET /health HTTP/1.1\", upstream: \"http://172.18.0.3:8000/health\", host: \"127.0.0.1:8080\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:27 +0000] \"GET /health HTTP/1.1\" 502 150 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 2026/10/22 15:00:29 [error] 23#23: *99 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.1, server: _, request: \"GET /health HTTP/1.1\", upstream: \"http://172.18.0.3:8000/health\", host: \"127.0.0.1:8080\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:29 +0000] \"GET /health HTTP/1.1\" 502 150 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 2026/10/22 15:00:30 [error] 23#23: *101 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: _, request: \"GET /health HTTP/1.1\", upstream: \"http://172.18.0.3:8000/health\", host: \"127.0.0.1\"\nnginx-1   | 127.0.0.1 - - [22/Oct/2026:15:00:30 +0000] \"GET /health HTTP/1.1\" 502 150 \"-\" \"Wget\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:31 +0000] \"GET /health HTTP/1.1\" 200 15 \"-\" \"Python-urllib/3.12\" \"-\"\nnginx-1   | 172.18.0.1 - - [22/Oct/2026:15:00:36 +0000] \"POST /predict/yolo HTTP/1.1\" 200 153 \"-\" \"Python-urllib/3.12\" \"-\"\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * DB loaded from append only file: 0.001 seconds\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Opening AOF incr file appendonly.aof.1.incr.aof on server start\nredis-1   | 1:M 22 Oct 2026 15:00:05.113 * Ready to accept connections tcp"
+}

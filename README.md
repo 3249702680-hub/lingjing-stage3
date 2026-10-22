@@ -103,3 +103,5 @@ Day3 历史验证见 [deploy/ACCEPTANCE.md](deploy/ACCEPTANCE.md)，Day4 Docker 
 ## 异步消息队列
 
 新增 JWT 保护的 `POST /jobs` 和 `GET /jobs/{job_id}`。Redis 存储真实队列，独立 RQ worker 处理 YOLO 或联合分析；提交立即返回 202 和任务编号，查询返回状态、结果或明确失败。使用方式、任务过期及持久化边界见 [QUEUE.md](deploy/QUEUE.md)。启动 `docker compose up -d --build` 会一起启动消费者。原有同步接口与网页行为保留。
+
+Day5 Nginx、JWT 与 Redis/RQ 的真实测试、提交及剩余范围见 [DAY5_ACCEPTANCE.md](deploy/DAY5_ACCEPTANCE.md) 和 [STAGE3_GAPS.md](deploy/STAGE3_GAPS.md)。

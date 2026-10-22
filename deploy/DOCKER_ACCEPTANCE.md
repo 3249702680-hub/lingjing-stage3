@@ -1,3 +1,5 @@
+当前包含 JWT 与真实消息队列的最新整体验收见 [DAY5_ACCEPTANCE.md](DAY5_ACCEPTANCE.md)：run 39800419193，39 项容器检查、35 项单元测试全部通过。下文保留各阶段历史。
+
 # Day5 Nginx 实机验收：通过
 
 - [GitHub Actions 39795471809](https://github.com/3249702680-hub/lingjing-stage3/actions/runs/39795471809)：success，实测提交 `f1bc5e67c22aad3ae0ef02287545e1bb838fab04`。
