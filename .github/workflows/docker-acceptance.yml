@@ -8,6 +8,7 @@ on:
       - Dockerfile
       - .dockerignore
       - docker-compose.yml
+      - deploy/nginx.conf
       - requirements.txt
       - weights/garbage_detect.pt
       - app.py
@@ -26,6 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      HTTP_PORT: "8080"
       COMPOSE_PROJECT_NAME: lingjing-ci-${{ github.run_id }}-${{ github.run_attempt }}
       DASHSCOPE_API_KEY: ""
       SQLSERVER_AUTH: sql
@@ -64,7 +66,7 @@ jobs:
           set -euo pipefail
           docker compose --progress plain build 2>&1 | tee artifacts/build.log
 
-      - name: Run real container acceptance
+      - name: Run real acceptance through Nginx
         run: |
           set -euo pipefail
           python3 scripts/ci_docker_acceptance.py \

@@ -16,6 +16,7 @@ import uuid
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-url", default="http://127.0.0.1:8080")
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--expected-class", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -43,7 +44,7 @@ def main():
 
     def request(path, payload=None, content_type="application/json", timeout=120):
         headers = {"Content-Type": content_type} if payload is not None else {}
-        req = urllib.request.Request("http://127.0.0.1:8000" + path, data=payload, headers=headers)
+        req = urllib.request.Request(args.base_url.rstrip("/") + path, data=payload, headers=headers)
         try:
             with http.open(req, timeout=timeout) as response:
                 return response.status, response.read()
@@ -109,9 +110,16 @@ def main():
         allowed = {"app.py", "web_ui.py", "database.py", "requirements.txt", "services/__init__.py",
                    "services/yolo_service.py", "services/qwen_service.py", "weights/garbage_detect.pt"}
         check("image_contains_only_allowed_project_files", set(files) == allowed, files=files)
-        command(compose + ["up", "-d", "--no-build", "app"], timeout=180)
+        command(compose + ["up", "-d", "--no-build", "nginx"], timeout=180)
         ready()
         original_id, volume = container()
+        ports = json.loads(command(["docker", "inspect", "--format", "{{json .HostConfig.PortBindings}}", original_id]))
+        check("app_port_not_published", not ports, port_bindings=ports)
+        command(compose + ["exec", "-T", "nginx", "nginx", "-t"])
+        check("nginx_configuration", True)
+        with http.open(args.base_url + "/health", timeout=10) as response:
+            check("http_reaches_nginx", "nginx" in response.headers.get("Server", "").lower(), server=response.headers.get("Server"))
+        nginx_id = command(compose + ["ps", "-q", "nginx"])
         for path in ("/health", "/docs", "/ui/"):
             status, body = request(path)
             check("http_" + path, status == 200, status=status, response_bytes=len(body))
@@ -137,6 +145,17 @@ def main():
             response = json.loads(body)
             check(route + "_missing_key_guard", status == 503 and "DASHSCOPE_API_KEY" in response.get("detail", ""),
                   status=status, response=response, real_qwen_verified=False)
+        ui_probe = ("from gradio_client import Client,handle_file; import json,sys; "
+                    "client=Client('http://nginx/ui/',verbose=False); "
+                    "result=client.predict(handle_file('/app/uploads/'+sys.argv[1]),api_name='/analyze_upload'); "
+                    "assert result[0] and result[1]; "
+                    "assert any(d['class_name']=='paper' for d in result[2]['detections']); "
+                    "assert 'API Key' in result[3]; "
+                    "print(json.dumps(dict(original_image=bool(result[0]),annotated_image=bool(result[1]),"
+                    "detections=result[2],qwen_guard=result[3]),ensure_ascii=False))")
+        ui_output = command(compose + ["exec", "-T", "app", "python", "-c", ui_probe, filename], timeout=120)
+        ui_result = json.loads(ui_output.splitlines()[-1])
+        check("gradio_upload_and_streaming_via_nginx", True, result=ui_result, real_qwen_verified=False)
         guard = ("from database import engine; from sqlalchemy.exc import SQLAlchemyError\n"
                  "try:\n engine.connect()\nexcept SQLAlchemyError as error:\n"
                  " assert 'SQLSERVER_USERNAME' in str(error); print('Missing SQL credentials rejected before connecting')\n"
@@ -146,6 +165,7 @@ def main():
         command(compose + ["up", "-d", "--force-recreate", "--no-build", "app"], timeout=180)
         ready()
         recreated_id, recreated_volume = container()
+        check("nginx_survives_app_recreation", nginx_id == command(compose + ["ps", "-q", "nginx"]))
         check("recreated_container_same_volume", original_id != recreated_id and volume == recreated_volume,
               old_container=original_id, new_container=recreated_id, volume=volume)
         hash_code = "from pathlib import Path; import hashlib,sys; print(hashlib.sha256((Path('/app/uploads')/sys.argv[1]).read_bytes()).hexdigest())"
@@ -158,7 +178,7 @@ def main():
         evidence["error"] = type(error).__name__ + ": " + str(error)
     finally:
         try:
-            evidence["container_logs"] = command(compose + ["logs", "--no-color", "--tail", "200", "app"])
+            evidence["container_logs"] = command(compose + ["logs", "--no-color", "--tail", "200", "app", "nginx"])
         except Exception as error:
             evidence["log_collection_error"] = str(error)
         args.output.parent.mkdir(parents=True, exist_ok=True)

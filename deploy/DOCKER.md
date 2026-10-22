@@ -71,9 +71,9 @@ docker compose logs --tail=100 app
 
 访问：
 
-- 网页：[http://127.0.0.1:8000/ui/](http://127.0.0.1:8000/ui/)
-- API 文档：[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- 存活检查：[http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- 网页：[http://127.0.0.1:8080/ui/](http://127.0.0.1:8080/ui/)
+- API 文档：[http://127.0.0.1:8080/docs](http://127.0.0.1:8080/docs)
+- 存活检查：[http://127.0.0.1:8080/health](http://127.0.0.1:8080/health)
 
 容器 HEALTHCHECK 调用 `/health`。该接口只表示 HTTP 服务存活，不检查 Qwen 凭据、SQL Server 连接、表结构或真实 YOLO 推理。必须继续完成下面的功能验证。
 
@@ -96,21 +96,21 @@ docker compose exec app python -c "from database import init_db; init_db()"
 以下命令使用 Bash；Windows PowerShell 上传时使用 `curl.exe`，或参考项目 README 的 PowerShell 示例。把图片路径改为自己的真实图片，并使用新文件名，避免与已有上传重名：
 
 ```bash
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS -F 'file=@/absolute/path/new-sample.jpg' http://127.0.0.1:8000/upload
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS -F 'file=@/absolute/path/new-sample.jpg' http://127.0.0.1:8080/upload
 ```
 
 记录上传响应中的实际 `filename`，将下面的 `new-sample.jpg` 替换为该值：
 
 ```bash
 curl -fsS -H 'Content-Type: application/json' \
-  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8000/predict/yolo
+  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/predict/yolo
 
 curl -fsS -H 'Content-Type: application/json' \
-  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8000/predict/qwen
+  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/predict/qwen
 
 curl -fsS -H 'Content-Type: application/json' \
-  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8000/analyze
+  -d '{"filename":"new-sample.jpg"}' http://127.0.0.1:8080/analyze
 ```
 
 `/predict/yolo` 不需要 Qwen 或数据库凭据；`/predict/qwen` 需要有效 Qwen 配置；`/analyze` 还需要数据库连接和表可用。缺少这些配置时出现相应错误，不能判定完整流程通过。
@@ -148,3 +148,16 @@ docker compose up -d
 构建、运行日志与 JSON 始终上传为 artifact；任何必须检查失败都会使 job 失败。验收后的清理只针对该 run 独有的 Compose 项目，独立命名卷已在清理前完成重建持久化验证。该工作流只验收应用容器，不自动部署长期公网服务。
 
 Docker 内按 requirements.txt 中相同版本使用官方 `ultralytics-opencv-headless` 分发，不改变本地 Windows 依赖文件和 `from ultralytics import YOLO`。pyodbc 与 OpenCV 要求二进制 wheel，避免下载编译器及桌面 OpenGL/LLVM。参见 [Ultralytics 官方安装说明](https://docs.ultralytics.com/quickstart/) 和 [同版本分发](https://pypi.org/project/ultralytics-opencv-headless/8.4.182/)。
+
+
+## Day5：Nginx 统一入口
+
+Compose 只发布 Nginx 的 `127.0.0.1:${HTTP_PORT:-8080}`，app 的 8000 只对 Compose 网络开放。原生 Windows 开发仍可用原有 `uvicorn app:app --reload`；不要混淆原生 8000 和容器代理 8080。
+
+运行 `docker compose up -d --build` 后访问 `http://127.0.0.1:8080/ui/` 和 `/docs`。`deploy/nginx.conf` 只读挂载到 Nginx，所有 URL 原样转发，支持 WebSocket Upgrade、Gradio SSE，关闭响应缓冲，并允许 12 MiB 请求体（Gradio 单图仍限制 10 MB）。Nginx 使用 Docker DNS 动态解析 app，app 重建后无需重启代理。
+
+执行 `docker compose exec nginx nginx -t` 检查配置，`docker compose logs --tail=100 nginx app` 查看错误。公网部署需另行配置可信 HTTPS 与访问控制，当前仅绑定本机地址，不自动开放公网。
+
+CI 的所有 HTTP 验收经 Nginx 8080 入口，另用 Gradio 客户端经过代理真实上传、运行纸张 YOLO、取回原图和标注图，并检查缺 Key 提示。Gradio 当前使用 SSE；WebSocket Upgrade 配置保留兼容性。CI 同时确认 app 没有发布端口，且 app 重建后 Nginx 本身未重建、上传文件与再次推理仍正常。没有把 Qwen 缺 Key 提示算作上游成功。
+
+参考：[Gradio 官方 Nginx 部署说明](https://www.gradio.app/guides/running-gradio-on-your-web-server-with-nginx)、[Nginx WebSocket 代理](https://nginx.org/en/docs/http/websocket.html)。
