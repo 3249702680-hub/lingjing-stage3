@@ -1,0 +1,120 @@
+name: Docker image export
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/docker-image-export.yml
+
+permissions:
+  contents: read
+
+jobs:
+  docker-image-export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      COMPOSE_PROJECT_NAME: lingjing-export-${{ github.run_id }}-${{ github.run_attempt }}
+      DASHSCOPE_API_KEY: ""
+      SQLSERVER_AUTH: sql
+      SQLSERVER_HOST: not-configured
+      SQLSERVER_USERNAME: ""
+      SQLSERVER_PASSWORD: ""
+      AUTH_USERNAME: ""
+      AUTH_PASSWORD_HASH: ""
+      JWT_SECRET: ""
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate source and Compose
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/logs
+          python3 - <<'PY'
+          import pathlib, subprocess
+          files = subprocess.check_output(['git', 'ls-files'], text=True).splitlines()
+          for name in files:
+              parts = pathlib.PurePosixPath(name).parts
+              assert not any(p in {'.venv', '__pycache__', '.env'} or p.startswith('.env.') or p.endswith('.env') for p in parts), name
+              assert not name.endswith(('.pyc', '.pyo')), name
+              assert not name.startswith('uploads/') or name == 'uploads/.gitkeep', name
+          assert list(pathlib.Path('tests').glob('test_*.py')), 'Existing unit tests must be present'
+          print('Source contains no tracked credentials, environments, caches or uploaded images.')
+          PY
+          docker version > artifacts/logs/docker-version.txt
+          docker compose config --quiet
+          git rev-parse HEAD > artifacts/source-sha.txt
+          test "$(cat artifacts/source-sha.txt)" = "$GITHUB_SHA"
+
+      - name: Build existing Compose application image
+        run: |
+          set -euo pipefail
+          docker compose --progress plain build app 2>&1 | tee artifacts/logs/build.log
+          docker image inspect --format '{{.Id}}' lingjing-stage3:day4 > artifacts/image-id.txt
+          docker image inspect --format '{{.Os}}/{{.Architecture}}' lingjing-stage3:day4 > artifacts/platform.txt
+          test "$(cat artifacts/platform.txt)" = "linux/amd64"
+
+      - name: Run existing unit tests inside built Linux image
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --env SQLSERVER_AUTH=sql \
+            --env DASHSCOPE_API_KEY= \
+            --env SQLSERVER_USERNAME= \
+            --env SQLSERVER_PASSWORD= \
+            --env JWT_SECRET= \
+            --env AUTH_USERNAME= \
+            --env AUTH_PASSWORD_HASH= \
+            --mount "type=bind,source=$PWD/tests,target=/app/tests,readonly" \
+            lingjing-stage3:day4 \
+            python -m unittest discover -s tests -v 2>&1 | tee artifacts/logs/unit-tests.log
+
+      - name: Export tested image
+        run: |
+          set -euo pipefail
+          docker save --output artifacts/lingjing-stage3-image.tar lingjing-stage3:day4
+          test -s artifacts/lingjing-stage3-image.tar
+          (cd artifacts && sha256sum lingjing-stage3-image.tar > image-tar.sha256)
+
+      - name: Upload tested image
+        id: image_artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lingjing-stage3-image-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/lingjing-stage3-image.tar
+            artifacts/image-id.txt
+            artifacts/source-sha.txt
+            artifacts/platform.txt
+            artifacts/image-tar.sha256
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Record export summary
+        env:
+          ARTIFACT_URL: ${{ steps.image_artifact.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'Source commit: `%s`\n\n' "$(cat artifacts/source-sha.txt)"
+            printf 'Tested image: `lingjing-stage3:day4` (`%s`)\n\n' "$(cat artifacts/image-id.txt)"
+            printf '[Download image artifact](%s) — retained for 3 days, compression disabled.\n' "$ARTIFACT_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build and test logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lingjing-stage3-image-export-logs-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/logs/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
